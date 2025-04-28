@@ -1,6 +1,11 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(express.json());
@@ -47,10 +52,19 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // Setup Vite for development
-  await setupVite(app, server);
+  if (process.env.NODE_ENV === "development") {
+    await setupVite(app, server);
+  } else {
+    // Serve static files in production
+    app.use(express.static(path.join(__dirname, "../dist")));
+    
+    // Handle client-side routing
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(__dirname, "../dist/index.html"));
+    });
+  }
 
-  const port = 5000;
+  const port = process.env.PORT || 5000;
   server.listen(port, () => {
     log(`serving on port ${port}`);
   });
